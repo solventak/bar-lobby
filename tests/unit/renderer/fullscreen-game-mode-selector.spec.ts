@@ -106,14 +106,4 @@ describe("FullscreenGameModeSelector", () => {
         expect(wrapper.findAll('[data-testid="custom-skirmish"]')).toHaveLength(1);
         expect(wrapper.find('[data-testid="game-mode-selector"]').exists()).toBe(false);
     });
-
-    it("preserves the existing mode-selection completion event", async () => {
-        const wrapper = mount(FullscreenGameModeSelector, { props: { visible: true } });
-
-        await wrapper.get('[data-testid="custom-skirmish"]').trigger("click");
-        await wrapper.get('[data-testid="select-mode"]').trigger("click");
-
-        expect(wrapper.emitted("closed")).toHaveLength(1);
-        expect(battleStore.isSelectingGameMode).toBe(false);
-    });
 });

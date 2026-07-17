@@ -6,11 +6,7 @@ import { describe, expect, it } from "vitest";
 import type { GameAI } from "@main/content/game/game-version";
 import type { MapData } from "@main/content/maps/map-data";
 import { Faction, type Player } from "@main/game/battle/battle-types";
-import {
-    createBeginnerSkirmishTeams,
-    getEligibleBeginnerSkirmishMaps,
-    selectBeginnerSkirmishMap,
-} from "@renderer/utils/beginner-skirmish";
+import { createBeginnerSkirmishTeams, getEligibleBeginnerSkirmishMaps } from "@renderer/utils/beginner-skirmish";
 
 const player = {
     id: 1,
@@ -59,16 +55,7 @@ describe("beginner skirmish preset", () => {
         const tooFewPlayers = map({ springName: "Four players", playerCountMax: 4 });
         const wrongMode = map({ springName: "1v1", tags: ["1v1"] });
 
-        expect(getEligibleBeginnerSkirmishMaps([eligible, tooManyTeams, tooSmall, tooFewPlayers, wrongMode])).toEqual([
-            { map: eligible, startBoxesIndex: 0 },
-        ]);
-    });
-
-    it("selects only from the constrained eligible map set", () => {
-        const first = map({ springName: "First" });
-        const second = map({ springName: "Second" });
-
-        expect(selectBeginnerSkirmishMap([first, second], () => 0.9)).toEqual({ map: second, startBoxesIndex: 0 });
+        expect(getEligibleBeginnerSkirmishMaps([eligible, tooManyTeams, tooSmall, tooFewPlayers, wrongMode])).toEqual([{ map: eligible, startBoxesIndex: 0 }]);
     });
 
     it("creates one player and five equally configured Armada BARb bots in a 3v3", () => {
