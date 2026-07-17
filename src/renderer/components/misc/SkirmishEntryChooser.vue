@@ -7,24 +7,42 @@ SPDX-License-Identifier: MIT
 <template>
     <div class="entry-select">
         <button class="entry-option recommended" data-testid="quick-start" type="button" @click="$emit('select-quick-start')">
-            <span class="eyebrow">{{ t("lobby.components.misc.skirmishEntryChooser.recommended") }}</span>
-            <span class="title">{{ t("lobby.components.misc.skirmishEntryChooser.quickStart") }}</span>
-            <span class="description">{{ t("lobby.components.misc.skirmishEntryChooser.quickStartDescription") }}</span>
-            <span class="summary">{{ t("lobby.components.misc.skirmishEntryChooser.quickStartSummary") }}</span>
-            <span class="action">{{ t("lobby.components.misc.skirmishEntryChooser.createQuickMatch") }}</span>
+            <span
+                class="art"
+                :style="{ backgroundImage: `url(${quickStartImage})` }"
+                aria-hidden="true"
+                data-testid="quick-start-art"
+            ></span>
+            <span class="content">
+                <span class="eyebrow">{{ t("lobby.components.misc.skirmishEntryChooser.recommended") }}</span>
+                <span class="title">{{ t("lobby.components.misc.skirmishEntryChooser.quickStart") }}</span>
+                <span class="description">{{ t("lobby.components.misc.skirmishEntryChooser.quickStartDescription") }}</span>
+                <span class="summary">{{ t("lobby.components.misc.skirmishEntryChooser.quickStartSummary") }}</span>
+                <span class="action">{{ t("lobby.components.misc.skirmishEntryChooser.createQuickMatch") }}</span>
+            </span>
         </button>
 
         <button class="entry-option" data-testid="custom-skirmish" type="button" @click="$emit('select-custom')">
-            <span class="eyebrow">{{ t("lobby.components.misc.skirmishEntryChooser.fullControl") }}</span>
-            <span class="title">{{ t("lobby.components.misc.skirmishEntryChooser.customSkirmish") }}</span>
-            <span class="description">{{ t("lobby.components.misc.skirmishEntryChooser.customSkirmishDescription") }}</span>
-            <span class="summary">{{ t("lobby.components.misc.skirmishEntryChooser.customSkirmishSummary") }}</span>
-            <span class="action">{{ t("lobby.components.misc.skirmishEntryChooser.setUpCustom") }}</span>
+            <span
+                class="art"
+                :style="{ backgroundImage: `url(${customSkirmishImage})` }"
+                aria-hidden="true"
+                data-testid="custom-skirmish-art"
+            ></span>
+            <span class="content">
+                <span class="eyebrow">{{ t("lobby.components.misc.skirmishEntryChooser.fullControl") }}</span>
+                <span class="title">{{ t("lobby.components.misc.skirmishEntryChooser.customSkirmish") }}</span>
+                <span class="description">{{ t("lobby.components.misc.skirmishEntryChooser.customSkirmishDescription") }}</span>
+                <span class="summary">{{ t("lobby.components.misc.skirmishEntryChooser.customSkirmishSummary") }}</span>
+                <span class="action">{{ t("lobby.components.misc.skirmishEntryChooser.setUpCustom") }}</span>
+            </span>
         </button>
     </div>
 </template>
 
 <script lang="ts" setup>
+import customSkirmishImage from "@renderer/assets/images/modes/classic/custom-skirmish.png";
+import quickStartImage from "@renderer/assets/images/modes/classic/quick-start.png";
 import { useTypedI18n } from "@renderer/i18n";
 
 const { t } = useTypedI18n();
@@ -43,15 +61,16 @@ defineEmits<{
 }
 
 .entry-option {
+    position: relative;
+    isolation: isolate;
     flex: 1;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 20px;
+    overflow: hidden;
     border: 0;
     color: white;
-    background: rgba(16, 23, 30, 0.92);
+    background: #10171e;
     cursor: pointer;
     text-align: center;
     transform: skewX(-5deg);
@@ -60,9 +79,12 @@ defineEmits<{
         filter 0.3s ease,
         transform 0.3s ease;
 
-    > span {
-        max-width: 70%;
-        transform: skewX(5deg);
+    &::after {
+        position: absolute;
+        z-index: -1;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(6, 10, 14, 0.18), rgba(6, 10, 14, 0.78));
+        content: "";
     }
 
     &:not(:disabled):hover,
@@ -76,10 +98,26 @@ defineEmits<{
     &:disabled {
         cursor: not-allowed;
     }
+}
 
-    &.recommended {
-        background: rgba(19, 40, 49, 0.94);
-    }
+.art {
+    position: absolute;
+    z-index: -2;
+    inset: -2px -80px;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    transform: skewX(5deg) scale(1.03);
+}
+
+.content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-sizing: border-box;
+    width: min(460px, calc(100vw - 96px));
+    gap: 20px;
+    transform: skewX(5deg);
 }
 
 .eyebrow,

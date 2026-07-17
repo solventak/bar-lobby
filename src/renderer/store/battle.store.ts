@@ -414,9 +414,9 @@ async function createBeginnerSkirmish(): Promise<CreateBeginnerSkirmishResult> {
         return { ok: false, message: i18n.global.t("lobby.components.misc.initialSetup.contentRequired") };
     }
 
-    const ai = game.ais.find((candidate) => candidate.shortName === BEGINNER_SKIRMISH_AI_SHORT_NAME);
+    const ai = engine.ais.find((candidate) => candidate.shortName === BEGINNER_SKIRMISH_AI_SHORT_NAME) ?? game.ais.find((candidate) => candidate.shortName === BEGINNER_SKIRMISH_AI_SHORT_NAME);
     if (!ai) {
-        return { ok: false, message: "BARb is not available in the selected game version." };
+        return { ok: false, message: "BARb is not available in the selected engine or game version." };
     }
 
     try {

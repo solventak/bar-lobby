@@ -7,12 +7,14 @@ import { mount } from "@vue/test-utils";
 import FullscreenGameModeSelector from "@renderer/components/battle/FullscreenGameModeSelector.vue";
 
 const battleStore = vi.hoisted(() => ({
+    isLobbyOpened: false,
     isSelectingGameMode: true,
 }));
 
 const createBeginnerSkirmish = vi.hoisted(() => vi.fn());
+const resetToDefaultBattle = vi.hoisted(() => vi.fn());
 
-vi.mock("@renderer/store/battle.store", () => ({ battleStore, battleActions: { createBeginnerSkirmish } }));
+vi.mock("@renderer/store/battle.store", () => ({ battleStore, battleActions: { createBeginnerSkirmish, resetToDefaultBattle } }));
 
 vi.mock("@renderer/components/misc/GameModeSelector.vue", () => ({
     default: {
@@ -24,16 +26,20 @@ vi.mock("@renderer/components/misc/GameModeSelector.vue", () => ({
 
 describe("FullscreenGameModeSelector", () => {
     beforeEach(() => {
+        battleStore.isLobbyOpened = false;
         battleStore.isSelectingGameMode = true;
         createBeginnerSkirmish.mockReset();
         createBeginnerSkirmish.mockResolvedValue({ ok: true });
+        resetToDefaultBattle.mockReset();
     });
 
     it("opens with quick-start and custom choices", () => {
         const wrapper = mount(FullscreenGameModeSelector, { props: { visible: true } });
 
         expect(wrapper.get('[data-testid="quick-start"]').attributes("disabled")).toBeUndefined();
+        expect(wrapper.get('[data-testid="quick-start-art"]').attributes("style")).toContain("quick-start.png");
         expect(wrapper.findAll('[data-testid="custom-skirmish"]')).toHaveLength(1);
+        expect(wrapper.get('[data-testid="custom-skirmish-art"]').attributes("style")).toContain("custom-skirmish.png");
         expect(wrapper.find('[data-testid="game-mode-selector"]').exists()).toBe(false);
     });
 
@@ -45,6 +51,7 @@ describe("FullscreenGameModeSelector", () => {
         expect(createBeginnerSkirmish).toHaveBeenCalledTimes(1);
         expect(wrapper.emitted("closed")).toHaveLength(1);
         expect(battleStore.isSelectingGameMode).toBe(false);
+        expect(battleStore.isLobbyOpened).toBe(true);
     });
 
     it("keeps Quick Start open with a retry action when preparation fails", async () => {
@@ -57,6 +64,25 @@ describe("FullscreenGameModeSelector", () => {
         expect(battleStore.isSelectingGameMode).toBe(true);
         await wrapper.get('[data-testid="retry-quick-start"]').trigger("click");
         expect(createBeginnerSkirmish).toHaveBeenCalledTimes(2);
+    });
+
+    it("dismisses without opening the battle room", async () => {
+        const wrapper = mount(FullscreenGameModeSelector, { props: { visible: true } });
+
+        await wrapper.trigger("click");
+
+        expect(battleStore.isSelectingGameMode).toBe(false);
+        expect(battleStore.isLobbyOpened).toBe(false);
+        expect(wrapper.emitted("closed")).toBeUndefined();
+    });
+
+    it("resets the Quick Start preset before configuring a custom skirmish", async () => {
+        const wrapper = mount(FullscreenGameModeSelector, { props: { visible: true } });
+
+        await wrapper.get('[data-testid="custom-skirmish"]').trigger("click");
+
+        expect(resetToDefaultBattle).toHaveBeenCalledTimes(1);
+        expect(wrapper.findAll('[data-testid="game-mode-selector"]')).toHaveLength(1);
     });
 
     it("drills into custom modes and returns to the entry choices", async () => {

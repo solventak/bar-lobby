@@ -9,8 +9,10 @@ SPDX-License-Identifier: MIT
         <div
             class="mode-column classic"
             @click="
-                battleActions.loadGameMode(GameModeID.CLASSIC);
-                $emit('selected');
+                async () => {
+                    await battleActions.loadGameMode(GameModeID.CLASSIC);
+                    $emit('selected');
+                }
             "
         >
             <span>{{ t("lobby.components.misc.gameModeSelector.classic") }}</span>
@@ -19,8 +21,10 @@ SPDX-License-Identifier: MIT
         <div
             class="mode-column raptors"
             @click="
-                battleActions.loadGameMode(GameModeID.RAPTORS);
-                $emit('selected');
+                async () => {
+                    await battleActions.loadGameMode(GameModeID.RAPTORS);
+                    $emit('selected');
+                }
             "
         >
             <span>{{ t("lobby.components.misc.gameModeSelector.raptors") }}</span>
@@ -29,8 +33,10 @@ SPDX-License-Identifier: MIT
         <div
             class="mode-column scavengers"
             @click="
-                battleActions.loadGameMode(GameModeID.SCAVENGERS);
-                $emit('selected');
+                async () => {
+                    await battleActions.loadGameMode(GameModeID.SCAVENGERS);
+                    $emit('selected');
+                }
             "
         >
             <span>{{ t("lobby.components.misc.gameModeSelector.scavengers") }}</span>
@@ -39,8 +45,10 @@ SPDX-License-Identifier: MIT
         <div
             class="mode-column ffa"
             @click="
-                battleActions.loadGameMode(GameModeID.FFA);
-                $emit('selected');
+                async () => {
+                    await battleActions.loadGameMode(GameModeID.FFA);
+                    $emit('selected');
+                }
             "
         >
             <span>{{ t("lobby.components.misc.gameModeSelector.ffa") }}</span>

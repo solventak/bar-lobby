@@ -14,10 +14,20 @@ SPDX-License-Identifier: MIT
                     @select-custom="openCustomModes"
                     @select-quick-start="createQuickStart"
                 />
-                <div v-else-if="flowState.step === 'preparing-quick-start'" key="preparing" class="quick-start-status" data-testid="quick-start-preparing">
+                <div
+                    v-else-if="flowState.step === 'preparing-quick-start'"
+                    key="preparing"
+                    class="quick-start-status"
+                    data-testid="quick-start-preparing"
+                >
                     <p>{{ t("lobby.components.misc.skirmishEntryChooser.preparingQuickStart") }}</p>
                 </div>
-                <div v-else-if="flowState.step === 'quick-start-error'" key="error" class="quick-start-status" data-testid="quick-start-error">
+                <div
+                    v-else-if="flowState.step === 'quick-start-error'"
+                    key="error"
+                    class="quick-start-status"
+                    data-testid="quick-start-error"
+                >
                     <p>{{ t("lobby.components.misc.skirmishEntryChooser.quickStartFailed") }}</p>
                     <p>{{ flowState.message }}</p>
                     <button data-testid="retry-quick-start" type="button" @click="createQuickStart">
@@ -67,6 +77,7 @@ function send(event: SkirmishEntryEvent) {
 }
 
 function openCustomModes() {
+    battleActions.resetToDefaultBattle();
     direction.value = "forward";
     send({ type: "select-custom" });
 }
@@ -104,6 +115,7 @@ function closeOverlay() {
 
 function completeSelection() {
     battleStore.isSelectingGameMode = false;
+    battleStore.isLobbyOpened = true;
     resetFlow();
     emit("closed");
 }
