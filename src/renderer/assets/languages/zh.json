@@ -4314,6 +4314,19 @@
                     "ffa": null,
                     "ffaDescription": null
                 },
+                "skirmishEntryChooser": {
+                    "recommended": null,
+                    "quickStart": null,
+                    "quickStartDescription": null,
+                    "quickStartSummary": null,
+                    "comingNext": null,
+                    "fullControl": null,
+                    "customSkirmish": null,
+                    "customSkirmishDescription": null,
+                    "customSkirmishSummary": null,
+                    "setUpCustom": null,
+                    "back": null
+                },
                 "error": {
                     "fatalError": null,
                     "fatalErrorDescription": null,

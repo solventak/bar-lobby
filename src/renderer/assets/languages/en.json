@@ -2198,6 +2198,19 @@
                     "ffa": "FFA",
                     "ffaDescription": "Last com standing wins"
                 },
+                "skirmishEntryChooser": {
+                    "recommended": "Recommended",
+                    "quickStart": "Quick Start",
+                    "quickStartDescription": "Start a recommended beginner 3v3 battle against AI.",
+                    "quickStartSummary": "You and two AI allies face three AI opponents on a suitable map.",
+                    "comingNext": "Quick match setup coming next",
+                    "fullControl": "Full control",
+                    "customSkirmish": "Custom Skirmish",
+                    "customSkirmishDescription": "Choose the game mode, map, teams, factions, and AI settings.",
+                    "customSkirmishSummary": "Continue into the existing custom battle setup.",
+                    "setUpCustom": "Set up custom game",
+                    "back": "Back to Skirmish choices"
+                },
                 "error": {
                     "fatalError": "Fatal Error",
                     "fatalErrorDescription": "A fatal error has occurred and BAR Lobby needs to reload.",
