@@ -6,12 +6,12 @@ SPDX-License-Identifier: MIT
 
 <template>
     <div class="entry-select">
-        <button class="entry-option recommended" data-testid="quick-start" disabled type="button">
+        <button class="entry-option recommended" data-testid="quick-start" type="button" @click="$emit('select-quick-start')">
             <span class="eyebrow">{{ t("lobby.components.misc.skirmishEntryChooser.recommended") }}</span>
             <span class="title">{{ t("lobby.components.misc.skirmishEntryChooser.quickStart") }}</span>
             <span class="description">{{ t("lobby.components.misc.skirmishEntryChooser.quickStartDescription") }}</span>
             <span class="summary">{{ t("lobby.components.misc.skirmishEntryChooser.quickStartSummary") }}</span>
-            <span class="availability">{{ t("lobby.components.misc.skirmishEntryChooser.comingNext") }}</span>
+            <span class="action">{{ t("lobby.components.misc.skirmishEntryChooser.createQuickMatch") }}</span>
         </button>
 
         <button class="entry-option" data-testid="custom-skirmish" type="button" @click="$emit('select-custom')">
@@ -31,6 +31,7 @@ const { t } = useTypedI18n();
 
 defineEmits<{
     "select-custom": [];
+    "select-quick-start": [];
 }>();
 </script>
 

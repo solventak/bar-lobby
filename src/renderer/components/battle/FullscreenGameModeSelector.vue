@@ -8,7 +8,23 @@ SPDX-License-Identifier: MIT
     <div class="fullscreen" :class="{ hidden: !battleStore.isSelectingGameMode }" @click.self="closeOverlay">
         <div class="gamemode-container">
             <Transition :name="transitionName" mode="out-in">
-                <SkirmishEntryChooser v-if="flowState.step === 'entry'" key="entry" @select-custom="openCustomModes" />
+                <SkirmishEntryChooser
+                    v-if="flowState.step === 'entry'"
+                    key="entry"
+                    @select-custom="openCustomModes"
+                    @select-quick-start="createQuickStart"
+                />
+                <div v-else-if="flowState.step === 'preparing-quick-start'" key="preparing" class="quick-start-status" data-testid="quick-start-preparing">
+                    <p>{{ t("lobby.components.misc.skirmishEntryChooser.preparingQuickStart") }}</p>
+                </div>
+                <div v-else-if="flowState.step === 'quick-start-error'" key="error" class="quick-start-status" data-testid="quick-start-error">
+                    <p>{{ t("lobby.components.misc.skirmishEntryChooser.quickStartFailed") }}</p>
+                    <p>{{ flowState.message }}</p>
+                    <button data-testid="retry-quick-start" type="button" @click="createQuickStart">
+                        {{ t("lobby.components.misc.skirmishEntryChooser.retryQuickStart") }}
+                    </button>
+                    <button type="button" @click="returnToEntry">{{ t("lobby.components.misc.skirmishEntryChooser.back") }}</button>
+                </div>
                 <div v-else key="custom-modes" class="custom-mode-step">
                     <button class="back-button" data-testid="back-to-skirmish-entry" type="button" @click="returnToEntry">
                         {{ t("lobby.components.misc.skirmishEntryChooser.back") }}
@@ -29,7 +45,7 @@ import {
     type SkirmishEntryEvent,
     type SkirmishEntryState,
 } from "@renderer/components/battle/skirmish-entry-flow";
-import { battleStore } from "@renderer/store/battle.store";
+import { battleActions, battleStore } from "@renderer/store/battle.store";
 import { useTypedI18n } from "@renderer/i18n";
 import { computed, ref, watch } from "vue";
 
@@ -53,6 +69,22 @@ function send(event: SkirmishEntryEvent) {
 function openCustomModes() {
     direction.value = "forward";
     send({ type: "select-custom" });
+}
+
+async function createQuickStart() {
+    direction.value = "forward";
+    if (flowState.value.step === "quick-start-error") {
+        send({ type: "retry-quick-start" });
+    } else {
+        send({ type: "select-quick-start" });
+    }
+
+    const result = await battleActions.createBeginnerSkirmish();
+    if (result.ok) {
+        completeSelection();
+    } else {
+        send({ type: "quick-start-failed", message: result.message });
+    }
 }
 
 function returnToEntry() {
@@ -118,6 +150,35 @@ watch(
 .custom-mode-step {
     position: relative;
     height: 100%;
+}
+
+.quick-start-status {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    color: white;
+    text-align: center;
+    background: rgba(19, 40, 49, 0.94);
+
+    p {
+        max-width: 38rem;
+        margin: 0;
+        font-size: 1.3rem;
+    }
+
+    button {
+        border: 0;
+        padding: 12px 18px;
+        color: white;
+        background: rgba(0, 0, 0, 0.65);
+        cursor: pointer;
+        font: inherit;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
 }
 
 .back-button {

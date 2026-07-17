@@ -18,6 +18,16 @@ describe("skirmish entry flow", () => {
         expect(transitionSkirmishEntry({ step: "custom-modes" }, { type: "back" })).toEqual({ step: "entry" });
     });
 
+    it("shows preparation while Quick Start is being created", () => {
+        expect(transitionSkirmishEntry(initialSkirmishEntryState, { type: "select-quick-start" })).toEqual({ step: "preparing-quick-start" });
+    });
+
+    it("keeps a failed Quick Start in the selector and allows retry", () => {
+        const failed = transitionSkirmishEntry({ step: "preparing-quick-start" }, { type: "quick-start-failed", message: "No eligible maps" });
+        expect(failed).toEqual({ step: "quick-start-error", message: "No eligible maps" });
+        expect(transitionSkirmishEntry(failed, { type: "retry-quick-start" })).toEqual({ step: "preparing-quick-start" });
+    });
+
     it("resets a nested flow when the overlay closes", () => {
         expect(transitionSkirmishEntry({ step: "custom-modes" }, { type: "reset" })).toEqual({ step: "entry" });
     });

@@ -10,11 +10,13 @@ import { enginesStore } from "@renderer/store/engine.store";
 import { gameStore } from "@renderer/store/game.store";
 import { getRandomMap } from "@renderer/store/maps.store";
 import { me } from "@renderer/store/me.store";
+import { db } from "@renderer/store/db";
+import { BEGINNER_SKIRMISH_AI_SHORT_NAME, createBeginnerSkirmishTeams, selectBeginnerSkirmishMap } from "@renderer/utils/beginner-skirmish";
 import { deepToRaw } from "@renderer/utils/deep-toraw";
 import { spadsBoxToStartBox } from "@renderer/utils/start-boxes";
 import { notificationsApi } from "@renderer/api/notifications";
 import { StartBox } from "tachyon-protocol/types";
-import { reactive, readonly, watch } from "vue";
+import { nextTick, reactive, readonly, watch } from "vue";
 import { startBattle as startGame } from "@renderer/store/game.store";
 import { setupI18n } from "@renderer/i18n";
 
@@ -26,6 +28,8 @@ interface BattleLobby {
     isLobbyOpened: boolean;
     isSelectingGameMode: boolean;
 }
+
+export type CreateBeginnerSkirmishResult = { ok: true } | { ok: false; message: string };
 
 // Store
 export const battleStore = reactive<Battle & BattleLobby>({
@@ -401,6 +405,53 @@ function resetToDefaultBattle(engine?: EngineVersion, game?: GameVersion, map?: 
     Object.assign(battleStore, battle);
 }
 
+async function createBeginnerSkirmish(): Promise<CreateBeginnerSkirmishResult> {
+    const engine = enginesStore.selectedEngineVersion;
+    const game = gameStore.selectedGameVersion;
+    const player = battleStore.me;
+
+    if (!engine || !game || !player) {
+        return { ok: false, message: i18n.global.t("lobby.components.misc.initialSetup.contentRequired") };
+    }
+
+    const ai = game.ais.find((candidate) => candidate.shortName === BEGINNER_SKIRMISH_AI_SHORT_NAME);
+    if (!ai) {
+        return { ok: false, message: "BARb is not available in the selected game version." };
+    }
+
+    try {
+        const selectedMap = selectBeginnerSkirmishMap(await db.maps.toArray());
+        if (!selectedMap) {
+            return { ok: false, message: "No eligible 3v3 maps are available." };
+        }
+
+        // Keep Quick Start on the exact same Classic initialization path as Custom Skirmish.
+        battleStore.battleOptions.map = selectedMap.map;
+        await nextTick();
+        await loadGameMode(GameModeID.CLASSIC);
+
+        battleStore.battleOptions.mapOptions = {
+            startPosType: StartPosType.Boxes,
+            startBoxesIndex: selectedMap.startBoxesIndex,
+        };
+        await nextTick();
+
+        const teams = createBeginnerSkirmishTeams({
+            player,
+            ai,
+            nextParticipantId: () => participantId++,
+        });
+        battleStore.me = teams[0].participants[0] as Player;
+        battleStore.teams = teams;
+        battleStore.spectators = [];
+
+        return { ok: true };
+    } catch (error) {
+        console.error("Failed to create beginner skirmish", error);
+        return { ok: false, message: "Unable to prepare the recommended skirmish. Please try again." };
+    }
+}
+
 async function startBattle() {
     if (!battleStore.battleOptions.engineVersion || !battleStore.battleOptions.gameVersion) {
         notificationsApi.alert({ text: i18n.global.t("lobby.components.misc.initialSetup.contentRequired"), severity: "error" });
@@ -619,6 +670,7 @@ export const battleActions = {
     startBattle,
     updateTeams,
     resetToDefaultBattle,
+    createBeginnerSkirmish,
     leaveLobby: leaveBattle,
     loadGameMode,
     getMaxPlayersPerTeam,
