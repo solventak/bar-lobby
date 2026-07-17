@@ -6,42 +6,42 @@ SPDX-License-Identifier: MIT
 
 <template>
     <div class="fullscreen" :class="{ hidden: !battleStore.isSelectingGameMode }" @click.self="closeOverlay">
-        <div class="gamemode-container">
-            <Transition :name="transitionName" mode="out-in">
-                <SkirmishEntryChooser
-                    v-if="flowState.step === 'entry'"
-                    key="entry"
-                    @select-custom="openCustomModes"
-                    @select-quick-start="createQuickStart"
-                />
-                <div
-                    v-else-if="flowState.step === 'preparing-quick-start'"
-                    key="preparing"
-                    class="quick-start-status"
-                    data-testid="quick-start-preparing"
-                >
-                    <p>{{ t("lobby.components.misc.skirmishEntryChooser.preparingQuickStart") }}</p>
-                </div>
-                <div
-                    v-else-if="flowState.step === 'quick-start-error'"
-                    key="error"
-                    class="quick-start-status"
-                    data-testid="quick-start-error"
-                >
+        <div
+            class="gamemode-container"
+            :class="{
+                'is-custom-collapsing': transitionPhase === 'custom-collapsing',
+                'is-custom-expanding': transitionPhase === 'custom-expanding',
+                'is-custom-open': transitionPhase === 'custom-open',
+                'is-quick-start-open': transitionPhase === 'quick-start-open',
+            }"
+        >
+            <div class="entry-step">
+                <SkirmishEntryChooser :expanded="expandedEntry" @select-custom="openCustomModes" @select-quick-start="createQuickStart" />
+            </div>
+            <div v-if="showCustomModes" class="custom-mode-step">
+                <button class="back-button" data-testid="back-to-skirmish-entry" type="button" @click="returnToEntry">
+                    {{ t("lobby.components.misc.skirmishEntryChooser.back") }}
+                </button>
+                <GameModeSelector @selected="completeSelection" />
+            </div>
+            <div
+                v-if="flowState.step === 'preparing-quick-start' || flowState.step === 'quick-start-error'"
+                class="quick-start-status"
+                :class="{ visible: transitionPhase === 'quick-start-open' }"
+                data-testid="quick-start-status"
+            >
+                <template v-if="flowState.step === 'preparing-quick-start'">
+                    <p data-testid="quick-start-preparing">{{ t("lobby.components.misc.skirmishEntryChooser.preparingQuickStart") }}</p>
+                </template>
+                <template v-else>
                     <p>{{ t("lobby.components.misc.skirmishEntryChooser.quickStartFailed") }}</p>
-                    <p>{{ flowState.message }}</p>
+                    <p data-testid="quick-start-error">{{ flowState.message }}</p>
                     <button data-testid="retry-quick-start" type="button" @click="createQuickStart">
                         {{ t("lobby.components.misc.skirmishEntryChooser.retryQuickStart") }}
                     </button>
                     <button type="button" @click="returnToEntry">{{ t("lobby.components.misc.skirmishEntryChooser.back") }}</button>
-                </div>
-                <div v-else key="custom-modes" class="custom-mode-step">
-                    <button class="back-button" data-testid="back-to-skirmish-entry" type="button" @click="returnToEntry">
-                        {{ t("lobby.components.misc.skirmishEntryChooser.back") }}
-                    </button>
-                    <GameModeSelector @selected="completeSelection" />
-                </div>
-            </Transition>
+                </template>
+            </div>
         </div>
     </div>
 </template>
@@ -57,7 +57,7 @@ import {
 } from "@renderer/components/battle/skirmish-entry-flow";
 import { battleActions, battleStore } from "@renderer/store/battle.store";
 import { useTypedI18n } from "@renderer/i18n";
-import { computed, ref, watch } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 
 const props = defineProps<{
     visible: boolean;
@@ -67,23 +67,44 @@ const emit = defineEmits<{
     closed: [];
 }>();
 
+type TransitionPhase = "idle" | "custom-expanding" | "custom-open" | "custom-collapsing" | "quick-start-open";
+
 const { t } = useTypedI18n();
 const flowState = ref<SkirmishEntryState>(initialSkirmishEntryState);
-const direction = ref<"forward" | "back">("forward");
-const transitionName = computed(() => (direction.value === "forward" ? "drill-forward" : "drill-back"));
+const transitionPhase = ref<TransitionPhase>("idle");
+let transitionTimer: ReturnType<typeof setTimeout> | undefined;
+
+const expandedEntry = computed<"custom" | "quick-start" | undefined>(() => {
+    if (transitionPhase.value === "custom-expanding" || transitionPhase.value === "custom-open") return "custom";
+    if (transitionPhase.value === "quick-start-open") return "quick-start";
+    return undefined;
+});
+const showCustomModes = computed(() => flowState.value.step === "custom-modes" || transitionPhase.value === "custom-collapsing");
 
 function send(event: SkirmishEntryEvent) {
     flowState.value = transitionSkirmishEntry(flowState.value, event);
 }
 
+function clearTransitionTimer() {
+    if (transitionTimer) {
+        clearTimeout(transitionTimer);
+        transitionTimer = undefined;
+    }
+}
+
 function openCustomModes() {
     battleActions.resetToDefaultBattle();
-    direction.value = "forward";
+    transitionPhase.value = "custom-expanding";
     send({ type: "select-custom" });
+    clearTransitionTimer();
+    transitionTimer = setTimeout(() => {
+        transitionPhase.value = "custom-open";
+        transitionTimer = undefined;
+    }, 100);
 }
 
 async function createQuickStart() {
-    direction.value = "forward";
+    transitionPhase.value = "quick-start-open";
     if (flowState.value.step === "quick-start-error") {
         send({ type: "retry-quick-start" });
     } else {
@@ -99,14 +120,28 @@ async function createQuickStart() {
 }
 
 function returnToEntry() {
-    direction.value = "back";
+    if (flowState.value.step !== "custom-modes") {
+        transitionPhase.value = "idle";
+        send({ type: "back" });
+        return;
+    }
+
+    transitionPhase.value = "custom-collapsing";
     send({ type: "back" });
+    clearTransitionTimer();
+    transitionTimer = setTimeout(() => {
+        transitionPhase.value = "idle";
+        transitionTimer = undefined;
+    }, 360);
 }
 
 function resetFlow() {
-    direction.value = "forward";
+    clearTransitionTimer();
+    transitionPhase.value = "idle";
     send({ type: "reset" });
 }
+
+onBeforeUnmount(clearTransitionTimer);
 
 function closeOverlay() {
     battleStore.isSelectingGameMode = false;
@@ -151,22 +186,56 @@ watch(
 }
 
 .gamemode-container {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-self: center;
-    height: 720px;
     width: min(1300px, calc(100vw - 120px));
+    height: 720px;
     overflow: hidden;
 }
 
+.entry-step,
+.custom-mode-step,
+.quick-start-status {
+    position: absolute;
+    inset: 0;
+}
+
+.entry-step {
+    z-index: 1;
+}
+
 .custom-mode-step {
-    position: relative;
-    height: 100%;
+    z-index: 2;
+    opacity: 1;
+    clip-path: inset(0 0 0 100%);
+    pointer-events: none;
+    transition:
+        clip-path 180ms cubic-bezier(0.2, 0.75, 0.2, 1),
+        opacity 120ms ease;
+}
+
+.gamemode-container.is-custom-open .custom-mode-step {
+    clip-path: inset(0);
+    pointer-events: auto;
+}
+
+.gamemode-container.is-custom-collapsing .custom-mode-step {
+    z-index: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+        clip-path 120ms ease,
+        opacity 120ms ease;
 }
 
 .quick-start-status {
+    z-index: 2;
     display: flex;
-    height: 100%;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 160ms ease 160ms;
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -193,6 +262,11 @@ watch(
     }
 }
 
+.quick-start-status.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
 .back-button {
     position: absolute;
     top: 20px;
@@ -206,26 +280,5 @@ watch(
     font: inherit;
     font-weight: 700;
     text-transform: uppercase;
-}
-
-.drill-forward-enter-active,
-.drill-forward-leave-active,
-.drill-back-enter-active,
-.drill-back-leave-active {
-    transition:
-        opacity 180ms ease,
-        transform 180ms ease;
-}
-
-.drill-forward-enter-from,
-.drill-back-leave-to {
-    opacity: 0;
-    transform: translateX(72px);
-}
-
-.drill-forward-leave-to,
-.drill-back-enter-from {
-    opacity: 0;
-    transform: translateX(-72px);
 }
 </style>

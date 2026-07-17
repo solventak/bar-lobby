@@ -61,6 +61,8 @@ describe("FullscreenGameModeSelector", () => {
         await wrapper.get('[data-testid="quick-start"]').trigger("click");
 
         expect(wrapper.get('[data-testid="quick-start-error"]').text()).toContain("No eligible 3v3 maps are available.");
+        expect(wrapper.get(".gamemode-container").classes()).toContain("is-quick-start-open");
+        expect(wrapper.get(".entry-select").classes()).toContain("is-quick-start-expanded");
         expect(battleStore.isSelectingGameMode).toBe(true);
         await wrapper.get('[data-testid="retry-quick-start"]').trigger("click");
         expect(createBeginnerSkirmish).toHaveBeenCalledTimes(2);
@@ -77,12 +79,22 @@ describe("FullscreenGameModeSelector", () => {
     });
 
     it("resets the Quick Start preset before configuring a custom skirmish", async () => {
-        const wrapper = mount(FullscreenGameModeSelector, { props: { visible: true } });
+        vi.useFakeTimers();
+        try {
+            const wrapper = mount(FullscreenGameModeSelector, { props: { visible: true } });
 
-        await wrapper.get('[data-testid="custom-skirmish"]').trigger("click");
+            await wrapper.get('[data-testid="custom-skirmish"]').trigger("click");
 
-        expect(resetToDefaultBattle).toHaveBeenCalledTimes(1);
-        expect(wrapper.findAll('[data-testid="game-mode-selector"]')).toHaveLength(1);
+            expect(resetToDefaultBattle).toHaveBeenCalledTimes(1);
+            expect(wrapper.get(".gamemode-container").classes()).toContain("is-custom-expanding");
+            expect(wrapper.get(".entry-select").classes()).toContain("is-custom-expanded");
+            expect(wrapper.findAll('[data-testid="game-mode-selector"]')).toHaveLength(1);
+
+            await vi.advanceTimersByTimeAsync(300);
+            expect(wrapper.get(".gamemode-container").classes()).toContain("is-custom-open");
+        } finally {
+            vi.useRealTimers();
+        }
     });
 
     it("drills into custom modes and returns to the entry choices", async () => {

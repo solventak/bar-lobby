@@ -5,7 +5,10 @@ SPDX-License-Identifier: MIT
 -->
 
 <template>
-    <div class="entry-select">
+    <div
+        class="entry-select"
+        :class="{ 'is-custom-expanded': expanded === 'custom', 'is-quick-start-expanded': expanded === 'quick-start' }"
+    >
         <button class="entry-option recommended" data-testid="quick-start" type="button" @click="$emit('select-quick-start')">
             <span
                 class="art"
@@ -22,7 +25,7 @@ SPDX-License-Identifier: MIT
             </span>
         </button>
 
-        <button class="entry-option" data-testid="custom-skirmish" type="button" @click="$emit('select-custom')">
+        <button class="entry-option custom" data-testid="custom-skirmish" type="button" @click="$emit('select-custom')">
             <span
                 class="art"
                 :style="{ backgroundImage: `url(${customSkirmishImage})` }"
@@ -47,6 +50,13 @@ import { useTypedI18n } from "@renderer/i18n";
 
 const { t } = useTypedI18n();
 
+withDefaults(
+    defineProps<{
+        expanded?: "custom" | "quick-start";
+    }>(),
+    { expanded: undefined }
+);
+
 defineEmits<{
     "select-custom": [];
     "select-quick-start": [];
@@ -63,6 +73,7 @@ defineEmits<{
 .entry-option {
     position: relative;
     isolation: isolate;
+    min-width: 0;
     flex: 1;
     display: flex;
     align-items: center;
@@ -75,9 +86,10 @@ defineEmits<{
     text-align: center;
     transform: skewX(-5deg);
     transition:
-        flex 0.3s ease,
+        flex 360ms cubic-bezier(0.2, 0.75, 0.2, 1),
         filter 0.3s ease,
-        transform 0.3s ease;
+        opacity 180ms ease,
+        transform 360ms cubic-bezier(0.2, 0.75, 0.2, 1);
 
     &::after {
         position: absolute;
@@ -85,6 +97,7 @@ defineEmits<{
         inset: 0;
         background: linear-gradient(180deg, rgba(6, 10, 14, 0.18), rgba(6, 10, 14, 0.78));
         content: "";
+        transition: opacity 180ms ease 140ms;
     }
 
     &:not(:disabled):hover,
@@ -100,6 +113,70 @@ defineEmits<{
     }
 }
 
+.entry-select.is-custom-expanded,
+.entry-select.is-quick-start-expanded {
+    pointer-events: none;
+
+    .entry-option {
+        filter: none;
+    }
+
+    .content {
+        opacity: 0;
+    }
+
+    .art,
+    .entry-option::after {
+        transition:
+            opacity 180ms ease 140ms,
+            transform 360ms cubic-bezier(0.2, 0.75, 0.2, 1);
+    }
+}
+
+.entry-select.is-custom-expanded {
+    .recommended {
+        flex: 0;
+        opacity: 0;
+        transform: translateX(-24px) skewX(-5deg);
+    }
+
+    .custom {
+        flex: 1;
+        transform: skewX(0deg);
+
+        .art {
+            opacity: 0.15;
+            transform: scale(1.03);
+        }
+
+        &::after {
+            opacity: 0.2;
+        }
+    }
+}
+
+.entry-select.is-quick-start-expanded {
+    .custom {
+        flex: 0;
+        opacity: 0;
+        transform: translateX(24px) skewX(-5deg);
+    }
+
+    .recommended {
+        flex: 1;
+        transform: skewX(0deg);
+
+        .art {
+            opacity: 0.2;
+            transform: scale(1.03);
+        }
+
+        &::after {
+            opacity: 0.2;
+        }
+    }
+}
+
 .art {
     position: absolute;
     z-index: -2;
@@ -108,6 +185,9 @@ defineEmits<{
     background-repeat: no-repeat;
     background-size: cover;
     transform: skewX(5deg) scale(1.03);
+    transition:
+        opacity 180ms ease 140ms,
+        transform 360ms cubic-bezier(0.2, 0.75, 0.2, 1);
 }
 
 .content {
@@ -117,7 +197,9 @@ defineEmits<{
     box-sizing: border-box;
     width: min(460px, calc(100vw - 96px));
     gap: 20px;
+    opacity: 1;
     transform: skewX(5deg);
+    transition: opacity 120ms ease;
 }
 
 .eyebrow,
