@@ -37,15 +37,20 @@ describe("NestedChoicePanel", () => {
 
         await wrapper.get('[data-testid="choice-first-branch"]').trigger("click");
         expect(beforeEnter).toHaveBeenCalledTimes(1);
-        expect(wrapper.find('[data-testid="choice-root-action"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="choice-root-action"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="choice-second-branch"]').exists()).toBe(true);
+        await wrapper.get('[data-testid="choice-level-forward-outgoing"]').trigger("animationend");
+        expect(wrapper.find('[data-testid="choice-root-action"]').exists()).toBe(false);
 
         await wrapper.get('[data-testid="choice-second-branch"]').trigger("click");
+        await wrapper.get('[data-testid="choice-level-forward-outgoing"]').trigger("animationend");
         expect(wrapper.find('[data-testid="choice-deep-leaf"]').exists()).toBe(true);
 
         await wrapper.get('[data-testid="choice-panel-back"]').trigger("click");
+        await wrapper.get('[data-testid="choice-level-back-incoming"]').trigger("animationend");
         expect(wrapper.find('[data-testid="choice-second-branch"]').exists()).toBe(true);
         await wrapper.get('[data-testid="choice-panel-back"]').trigger("click");
+        await wrapper.get('[data-testid="choice-level-back-incoming"]').trigger("animationend");
         expect(wrapper.find('[data-testid="choice-first-branch"]').exists()).toBe(true);
     });
 
@@ -66,6 +71,73 @@ describe("NestedChoicePanel", () => {
 
         expect(wrapper.find('[data-testid="choice-branch"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="choice-leaf"]').exists()).toBe(false);
+    });
+
+    it("keeps both levels mounted and locked until a forward transition actually completes", async () => {
+        const choices: ChoicePanelItem[] = [
+            action("root-action"),
+            {
+                type: "branch",
+                id: "branch",
+                title: "Branch",
+                children: [action("leaf")],
+            },
+        ];
+        const wrapper = mount(NestedChoicePanel, { props: { choices, backLabel: "Back" } });
+
+        await wrapper.get('[data-testid="choice-branch"]').trigger("click");
+
+        expect(wrapper.find('[data-testid="choice-root-action"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="choice-leaf"]').exists()).toBe(true);
+        expect(wrapper.get('[data-testid="choice-root-action"]').attributes("disabled")).toBeDefined();
+        expect(wrapper.get('[data-testid="choice-leaf"]').attributes("disabled")).toBeDefined();
+
+        await wrapper.get('[data-testid="choice-level-forward-outgoing"]').trigger("animationend");
+        expect(wrapper.find('[data-testid="choice-root-action"]').exists()).toBe(false);
+        expect(wrapper.get('[data-testid="choice-leaf"]').attributes("disabled")).toBeUndefined();
+    });
+
+    it("collapses children into their parent before returning to the prior level", async () => {
+        const choices: ChoicePanelItem[] = [
+            action("root-action"),
+            {
+                type: "branch",
+                id: "branch",
+                title: "Branch",
+                children: [action("leaf")],
+            },
+        ];
+        const wrapper = mount(NestedChoicePanel, { props: { choices, backLabel: "Back" } });
+
+        await wrapper.get('[data-testid="choice-branch"]').trigger("click");
+        await wrapper.get('[data-testid="choice-level-forward-outgoing"]').trigger("animationend");
+        await wrapper.get('[data-testid="choice-panel-back"]').trigger("click");
+
+        expect(wrapper.find('[data-testid="choice-leaf"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="choice-branch"]').exists()).toBe(true);
+
+        await wrapper.get('[data-testid="choice-level-back-incoming"]').trigger("animationend");
+        expect(wrapper.find('[data-testid="choice-leaf"]').exists()).toBe(false);
+        expect(wrapper.get('[data-testid="choice-branch"]').attributes("disabled")).toBeUndefined();
+    });
+
+    it("resets an interrupted transition directly to the root", async () => {
+        const choices: ChoicePanelItem[] = [
+            {
+                type: "branch",
+                id: "branch",
+                title: "Branch",
+                children: [action("leaf")],
+            },
+        ];
+        const wrapper = mount(NestedChoicePanel, { props: { choices, backLabel: "Back", resetKey: 0 } });
+
+        await wrapper.get('[data-testid="choice-branch"]').trigger("click");
+        await wrapper.setProps({ resetKey: 1 });
+
+        expect(wrapper.find('[data-testid="choice-level-forward-outgoing"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="choice-leaf"]').exists()).toBe(false);
+        expect(wrapper.get('[data-testid="choice-branch"]').attributes("disabled")).toBeUndefined();
     });
 
     it("keeps an action pending until it completes", async () => {

@@ -21,6 +21,14 @@ vi.mock("@renderer/store/battle.store", () => ({
     battleActions: { createBeginnerSkirmish, loadGameMode, resetToDefaultBattle },
 }));
 
+async function finishForwardTransition(wrapper: ReturnType<typeof mount>) {
+    await wrapper.get('[data-testid="choice-level-forward-outgoing"]').trigger("animationend");
+}
+
+async function finishBackTransition(wrapper: ReturnType<typeof mount>) {
+    await wrapper.get('[data-testid="choice-level-back-incoming"]').trigger("animationend");
+}
+
 describe("FullscreenGameModeSelector", () => {
     beforeEach(() => {
         battleStore.isLobbyOpened = false;
@@ -91,6 +99,7 @@ describe("FullscreenGameModeSelector", () => {
         const wrapper = mount(FullscreenGameModeSelector, { props: { visible: true } });
 
         await wrapper.get('[data-testid="custom-skirmish"]').trigger("click");
+        await finishForwardTransition(wrapper);
         await wrapper.get('[data-testid="choice-classic"]').trigger("click");
 
         expect(loadGameMode).toHaveBeenCalledWith(GameModeID.CLASSIC);
@@ -102,7 +111,9 @@ describe("FullscreenGameModeSelector", () => {
         const wrapper = mount(FullscreenGameModeSelector, { props: { visible: true } });
 
         await wrapper.get('[data-testid="custom-skirmish"]').trigger("click");
+        await finishForwardTransition(wrapper);
         await wrapper.get('[data-testid="choice-panel-back"]').trigger("click");
+        await finishBackTransition(wrapper);
 
         expect(wrapper.findAll('[data-testid="custom-skirmish"]')).toHaveLength(1);
         expect(wrapper.find('[data-testid="choice-classic"]').exists()).toBe(false);

@@ -5,13 +5,26 @@ SPDX-License-Identifier: MIT
 -->
 
 <template>
-    <div class="choice-level">
+    <div
+        class="choice-level"
+        :class="transitionRole && `is-${transitionRole}`"
+        :data-testid="transitionRole ? `choice-level-${transitionRole}` : undefined"
+        @animationend="onAnimationEnd"
+    >
         <button
             v-for="item in items"
             :key="item.id"
             class="choice-item"
-            :class="[`presentation-${item.presentation ?? 'detailed'}`, { recommended: item.emphasis === 'recommended' }]"
+            :class="[
+                `presentation-${item.presentation ?? 'detailed'}`,
+                {
+                    recommended: item.emphasis === 'recommended',
+                    'is-selected': item.id === selectedId,
+                    'is-sibling': selectedId !== undefined && item.id !== selectedId,
+                },
+            ]"
             :data-testid="item.testId ?? `choice-${item.id}`"
+            :disabled="!interactive"
             type="button"
             @click="$emit('select', item)"
         >
@@ -36,14 +49,29 @@ SPDX-License-Identifier: MIT
 <script lang="ts" setup>
 import type { ChoicePanelItem } from "@renderer/components/misc/nested-choice-panel.types";
 
-defineProps<{ items: ChoicePanelItem[] }>();
+withDefaults(
+    defineProps<{
+        items: ChoicePanelItem[];
+        selectedId?: string;
+        transitionRole?: "forward-outgoing" | "forward-incoming" | "back-outgoing" | "back-incoming";
+        interactive?: boolean;
+    }>(),
+    { selectedId: undefined, transitionRole: undefined, interactive: true }
+);
 
-defineEmits<{
+const emit = defineEmits<{
     select: [item: ChoicePanelItem];
+    "transition-complete": [];
 }>();
+
+function onAnimationEnd(event: AnimationEvent) {
+    if (event.target === event.currentTarget) emit("transition-complete");
+}
 </script>
 
 <style lang="scss" scoped>
+$transition-duration: 440ms;
+
 .choice-level {
     display: flex;
     height: 100%;
@@ -80,8 +108,8 @@ defineEmits<{
         content: "";
     }
 
-    &:hover,
-    &:focus-visible {
+    &:not(:disabled):hover,
+    &:not(:disabled):focus-visible {
         z-index: 1;
         flex: 1.15;
         filter: brightness(1.15);
@@ -137,8 +165,8 @@ defineEmits<{
     padding-top: 30px;
     filter: brightness(0.7);
 
-    &:hover,
-    &:focus-visible {
+    &:not(:disabled):hover,
+    &:not(:disabled):focus-visible {
         flex: 1.5;
         filter: brightness(1);
         transform: scale(1.05) skewX(0deg);
@@ -171,6 +199,159 @@ defineEmits<{
         font-family: Rajdhani;
         font-size: 2rem;
         letter-spacing: normal;
+    }
+}
+
+.is-forward-outgoing,
+.is-forward-incoming,
+.is-back-outgoing,
+.is-back-incoming {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.is-forward-outgoing {
+    z-index: 2;
+    animation: hold-level $transition-duration linear both;
+
+    .choice-item {
+        transition: none;
+    }
+
+    .choice-item.is-selected {
+        animation: expand-selected $transition-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
+    }
+
+    .choice-item.is-sibling {
+        animation: contract-sibling $transition-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
+    }
+}
+
+.is-forward-incoming {
+    z-index: 1;
+    animation: reveal-child-level $transition-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
+}
+
+.is-back-outgoing {
+    z-index: 2;
+    animation: conceal-child-level $transition-duration ease both;
+}
+
+.is-back-incoming {
+    z-index: 1;
+    animation: hold-level $transition-duration linear both;
+
+    .choice-item {
+        transition: none;
+    }
+
+    .choice-item.is-selected {
+        animation: restore-selected $transition-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
+    }
+
+    .choice-item.is-sibling {
+        animation: restore-sibling $transition-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
+    }
+}
+
+@keyframes hold-level {
+    from,
+    to {
+        visibility: visible;
+    }
+}
+
+@keyframes expand-selected {
+    0% {
+        flex-grow: 1;
+        opacity: 1;
+        filter: brightness(0.85);
+        transform: skewX(-5deg);
+    }
+    58% {
+        flex-grow: 1;
+        opacity: 1;
+        filter: brightness(1);
+        transform: skewX(0deg);
+    }
+    100% {
+        flex-grow: 1;
+        opacity: 0;
+        filter: brightness(1);
+        transform: skewX(0deg);
+    }
+}
+
+@keyframes contract-sibling {
+    0% {
+        flex-grow: 1;
+        min-width: 0;
+        opacity: 1;
+    }
+    58%,
+    100% {
+        flex-grow: 0;
+        min-width: 0;
+        opacity: 0;
+    }
+}
+
+@keyframes reveal-child-level {
+    0%,
+    54% {
+        opacity: 0;
+        clip-path: inset(0 48% 0 48%);
+        transform: scaleX(0.98);
+    }
+    100% {
+        opacity: 1;
+        clip-path: inset(0);
+        transform: scaleX(1);
+    }
+}
+
+@keyframes conceal-child-level {
+    0% {
+        opacity: 1;
+        clip-path: inset(0);
+        transform: scaleX(1);
+    }
+    42%,
+    100% {
+        opacity: 0;
+        clip-path: inset(0 48% 0 48%);
+        transform: scaleX(0.98);
+    }
+}
+
+@keyframes restore-selected {
+    0%,
+    42% {
+        flex-grow: 1;
+        opacity: 1;
+        filter: brightness(1);
+        transform: skewX(0deg);
+    }
+    100% {
+        flex-grow: 1;
+        opacity: 1;
+        filter: brightness(0.85);
+        transform: skewX(-5deg);
+    }
+}
+
+@keyframes restore-sibling {
+    0%,
+    42% {
+        flex-grow: 0;
+        min-width: 0;
+        opacity: 0;
+    }
+    100% {
+        flex-grow: 1;
+        min-width: 0;
+        opacity: 1;
     }
 }
 </style>
