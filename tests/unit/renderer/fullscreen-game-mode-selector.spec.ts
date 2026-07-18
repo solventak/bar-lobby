@@ -98,6 +98,20 @@ describe("FullscreenGameModeSelector", () => {
         expect(wrapper.find('[data-testid="choice-ffa"]').exists()).toBe(true);
     });
 
+    it("uses the same detailed choice presentation for custom modes", async () => {
+        const wrapper = mount(FullscreenGameModeSelector, { props: { visible: true } });
+
+        await wrapper.get('[data-testid="custom-skirmish"]').trigger("click");
+        await finishForwardTransition(wrapper);
+
+        const classic = wrapper.get('[data-testid="choice-classic"]');
+        expect(classic.classes()).toContain("presentation-detailed");
+        expect(classic.classes()).not.toContain("presentation-mode");
+        expect(classic.find(".description").exists()).toBe(true);
+        expect(classic.find(".action").exists()).toBe(false);
+        expect(classic.element.parentElement?.style.getPropertyValue("--choice-count")).toBe("4");
+    });
+
     it("loads the selected custom mode before opening the battle room", async () => {
         const wrapper = mount(FullscreenGameModeSelector, { props: { visible: true } });
 

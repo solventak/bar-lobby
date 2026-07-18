@@ -45,14 +45,13 @@ const emit = defineEmits<{
 const { t } = useTypedI18n();
 const resetKey = ref(0);
 
-function modeChoice(id: string, title: string, actionLabel: string, artwork: string, gameModeId: GameModeID): ChoicePanelItem {
+function modeChoice(id: string, title: string, description: string, artwork: string, gameModeId: GameModeID): ChoicePanelItem {
     return {
         type: "action",
         id,
         title,
-        actionLabel,
+        description,
         artwork,
-        presentation: "mode",
         run: async () => {
             await battleActions.loadGameMode(gameModeId);
             return { ok: true };

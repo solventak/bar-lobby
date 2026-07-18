@@ -8,15 +8,15 @@ SPDX-License-Identifier: MIT
     <div
         class="choice-level"
         :class="transitionRole && `is-${transitionRole}`"
+        :style="{ '--choice-count': items.length }"
         :data-testid="transitionRole ? `choice-level-${transitionRole}` : undefined"
         @animationend="onAnimationEnd"
     >
         <button
             v-for="item in items"
             :key="item.id"
-            class="choice-item"
+            class="choice-item presentation-detailed"
             :class="[
-                `presentation-${item.presentation ?? 'detailed'}`,
                 {
                     recommended: item.emphasis === 'recommended',
                     'is-selected': item.id === selectedId,
@@ -70,13 +70,16 @@ function onAnimationEnd(event: AnimationEvent) {
 </script>
 
 <style lang="scss" scoped>
-$branch-duration: 300ms;
-$swipe-duration: 220ms;
+$forward-branch-duration: 300ms;
+$forward-swipe-duration: 220ms;
+$back-swipe-duration: 280ms;
+$back-branch-duration: 360ms;
 
 .choice-level {
     display: flex;
     height: 100%;
     overflow: hidden;
+    container-type: inline-size;
 }
 
 .choice-item {
@@ -134,7 +137,7 @@ $swipe-duration: 220ms;
     flex-direction: column;
     align-items: center;
     box-sizing: border-box;
-    width: min(460px, calc(100vw - 96px));
+    width: min(460px, calc(100cqw / var(--choice-count) - 48px));
     gap: 20px;
     transform: skewX(5deg);
 }
@@ -161,48 +164,6 @@ $swipe-duration: 220ms;
     font-size: 1.2rem;
 }
 
-.presentation-mode {
-    justify-content: center;
-    padding-top: 30px;
-    filter: brightness(0.7);
-
-    &:not(:disabled):hover,
-    &:not(:disabled):focus-visible {
-        flex: 1.5;
-        filter: brightness(1);
-        transform: scale(1.05) skewX(0deg);
-        box-shadow: 0 0 10px 5px rgba(0, 0, 0, 0.5);
-    }
-
-    .content {
-        justify-content: space-between;
-        width: 100%;
-        height: 100%;
-        gap: 0;
-    }
-
-    .title {
-        font-size: 2rem;
-        filter: drop-shadow(3px 3px 5px rgba(0, 0, 0, 0.8));
-    }
-
-    .action {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-sizing: border-box;
-        width: 100%;
-        min-height: 120px;
-        padding: 20px;
-        color: white;
-        background: linear-gradient(90deg, #22c55e, #16a34a);
-        box-shadow: 0 8px 15px rgba(34, 197, 94, 0.4);
-        font-family: Rajdhani;
-        font-size: 2rem;
-        letter-spacing: normal;
-    }
-}
-
 .is-branch-expanding,
 .is-branch-expanded,
 .is-child-entering,
@@ -216,7 +177,6 @@ $swipe-duration: 220ms;
 .is-branch-expanding,
 .is-branch-collapsing {
     z-index: 1;
-    animation: hold-level $branch-duration linear both;
 
     .choice-item {
         transition: none;
@@ -224,12 +184,14 @@ $swipe-duration: 220ms;
 }
 
 .is-branch-expanding {
+    animation: hold-level $forward-branch-duration linear both;
+
     .choice-item.is-selected {
-        animation: expand-selected $branch-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
+        animation: expand-selected $forward-branch-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
     }
 
     .choice-item.is-sibling {
-        animation: contract-sibling $branch-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
+        animation: contract-sibling $forward-branch-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
     }
 }
 
@@ -256,21 +218,23 @@ $swipe-duration: 220ms;
 
 .is-child-entering {
     z-index: 2;
-    animation: child-enter-from-right $swipe-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
+    animation: child-enter-from-right $forward-swipe-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
 }
 
 .is-child-exiting {
     z-index: 2;
-    animation: child-exit-to-right $swipe-duration cubic-bezier(0.4, 0, 0.8, 0.25) both;
+    animation: child-exit-to-right $back-swipe-duration cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .is-branch-collapsing {
+    animation: hold-level $back-branch-duration linear both;
+
     .choice-item.is-selected {
-        animation: collapse-selected $branch-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
+        animation: collapse-selected $back-branch-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
     }
 
     .choice-item.is-sibling {
-        animation: restore-sibling $branch-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
+        animation: restore-sibling $back-branch-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
     }
 }
 

@@ -15,7 +15,6 @@ interface ChoicePanelAppearance {
     summary?: string;
     actionLabel?: string;
     emphasis?: "recommended" | "normal";
-    presentation?: "detailed" | "mode";
 }
 
 export interface ChoicePanelBranch extends ChoicePanelAppearance {
