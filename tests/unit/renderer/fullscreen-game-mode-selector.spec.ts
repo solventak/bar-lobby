@@ -22,11 +22,13 @@ vi.mock("@renderer/store/battle.store", () => ({
 }));
 
 async function finishForwardTransition(wrapper: ReturnType<typeof mount>) {
-    await wrapper.get('[data-testid="choice-level-forward-outgoing"]').trigger("animationend");
+    await wrapper.get('[data-testid="choice-level-branch-expanding"]').trigger("animationend");
+    await wrapper.get('[data-testid="choice-level-child-entering"]').trigger("animationend");
 }
 
 async function finishBackTransition(wrapper: ReturnType<typeof mount>) {
-    await wrapper.get('[data-testid="choice-level-back-incoming"]').trigger("animationend");
+    await wrapper.get('[data-testid="choice-level-child-exiting"]').trigger("animationend");
+    await wrapper.get('[data-testid="choice-level-branch-collapsing"]').trigger("animationend");
 }
 
 describe("FullscreenGameModeSelector", () => {
@@ -87,6 +89,7 @@ describe("FullscreenGameModeSelector", () => {
         const wrapper = mount(FullscreenGameModeSelector, { props: { visible: true } });
 
         await wrapper.get('[data-testid="custom-skirmish"]').trigger("click");
+        await finishForwardTransition(wrapper);
 
         expect(resetToDefaultBattle).toHaveBeenCalledTimes(1);
         expect(wrapper.find('[data-testid="choice-classic"]').exists()).toBe(true);

@@ -10,20 +10,50 @@ SPDX-License-Identifier: MIT
             <button v-if="path.length && !transition" class="back-button" data-testid="choice-panel-back" type="button" @click="goBack">
                 {{ backLabel }}
             </button>
-            <div v-if="transition" class="transition-stack" :class="`transition-${transition.direction}`">
+            <div v-if="transition" class="transition-stack">
                 <DiagonalChoiceLevel
-                    :items="transition.outgoingItems"
-                    :selected-id="transition.direction === 'forward' ? transition.branch.id : undefined"
-                    :transition-role="`${transition.direction}-outgoing`"
+                    v-if="transition.phase === 'branch-expanding'"
+                    :items="transition.parentItems"
+                    :selected-id="transition.branch.id"
+                    transition-role="branch-expanding"
                     :interactive="false"
-                    @transition-complete="transition.direction === 'forward' && completeTransition()"
+                    @transition-complete="advanceTransition"
                 />
+                <template v-else-if="transition.phase === 'child-entering'">
+                    <DiagonalChoiceLevel
+                        :items="transition.parentItems"
+                        :selected-id="transition.branch.id"
+                        transition-role="branch-expanded"
+                        :interactive="false"
+                    />
+                    <DiagonalChoiceLevel
+                        :items="transition.childItems"
+                        transition-role="child-entering"
+                        :interactive="false"
+                        @transition-complete="advanceTransition"
+                    />
+                </template>
+                <template v-else-if="transition.phase === 'child-exiting'">
+                    <DiagonalChoiceLevel
+                        :items="transition.parentItems"
+                        :selected-id="transition.branch.id"
+                        transition-role="branch-expanded"
+                        :interactive="false"
+                    />
+                    <DiagonalChoiceLevel
+                        :items="transition.childItems"
+                        transition-role="child-exiting"
+                        :interactive="false"
+                        @transition-complete="advanceTransition"
+                    />
+                </template>
                 <DiagonalChoiceLevel
-                    :items="transition.incomingItems"
-                    :selected-id="transition.direction === 'back' ? transition.branch.id : undefined"
-                    :transition-role="`${transition.direction}-incoming`"
+                    v-else
+                    :items="transition.parentItems"
+                    :selected-id="transition.branch.id"
+                    transition-role="branch-collapsing"
                     :interactive="false"
-                    @transition-complete="transition.direction === 'back' && completeTransition()"
+                    @transition-complete="advanceTransition"
                 />
             </div>
             <DiagonalChoiceLevel v-else :items="currentItems" @select="selectItem" />
@@ -66,11 +96,13 @@ const emit = defineEmits<{
     completed: [id: string];
 }>();
 
+type TransitionPhase = "branch-expanding" | "child-entering" | "child-exiting" | "branch-collapsing";
+
 type PanelTransition = {
-    direction: "forward" | "back";
+    phase: TransitionPhase;
     branch: ChoicePanelBranch;
-    outgoingItems: ChoicePanelItem[];
-    incomingItems: ChoicePanelItem[];
+    parentItems: ChoicePanelItem[];
+    childItems: ChoicePanelItem[];
 };
 
 const path = ref<ChoicePanelBranch[]>([]);
@@ -87,10 +119,10 @@ async function selectItem(item: ChoicePanelItem) {
         await item.beforeEnter?.();
         if (transition.value) return;
         transition.value = {
-            direction: "forward",
+            phase: "branch-expanding",
             branch: item,
-            outgoingItems: currentItems.value,
-            incomingItems: item.children,
+            parentItems: currentItems.value,
+            childItems: item.children,
         };
         return;
     }
@@ -131,25 +163,34 @@ function goBack() {
     const branch = path.value.at(-1);
     if (!branch) return;
 
-    const parentItems = path.value.at(-2)?.children ?? props.choices;
     transition.value = {
-        direction: "back",
+        phase: "child-exiting",
         branch,
-        outgoingItems: currentItems.value,
-        incomingItems: parentItems,
+        parentItems: path.value.at(-2)?.children ?? props.choices,
+        childItems: currentItems.value,
     };
 }
 
-function completeTransition() {
+function advanceTransition() {
     const activeTransition = transition.value;
     if (!activeTransition) return;
 
-    if (activeTransition.direction === "forward") {
-        path.value.push(activeTransition.branch);
-    } else {
-        path.value.pop();
+    switch (activeTransition.phase) {
+        case "branch-expanding":
+            activeTransition.phase = "child-entering";
+            break;
+        case "child-entering":
+            path.value.push(activeTransition.branch);
+            transition.value = undefined;
+            break;
+        case "child-exiting":
+            activeTransition.phase = "branch-collapsing";
+            break;
+        case "branch-collapsing":
+            path.value.pop();
+            transition.value = undefined;
+            break;
     }
-    transition.value = undefined;
 }
 
 function reset() {

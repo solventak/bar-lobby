@@ -53,7 +53,7 @@ withDefaults(
     defineProps<{
         items: ChoicePanelItem[];
         selectedId?: string;
-        transitionRole?: "forward-outgoing" | "forward-incoming" | "back-outgoing" | "back-incoming";
+        transitionRole?: "branch-expanding" | "branch-expanded" | "child-entering" | "child-exiting" | "branch-collapsing";
         interactive?: boolean;
     }>(),
     { selectedId: undefined, transitionRole: undefined, interactive: true }
@@ -70,7 +70,8 @@ function onAnimationEnd(event: AnimationEvent) {
 </script>
 
 <style lang="scss" scoped>
-$transition-duration: 440ms;
+$branch-duration: 300ms;
+$swipe-duration: 220ms;
 
 .choice-level {
     display: flex;
@@ -202,56 +203,74 @@ $transition-duration: 440ms;
     }
 }
 
-.is-forward-outgoing,
-.is-forward-incoming,
-.is-back-outgoing,
-.is-back-incoming {
+.is-branch-expanding,
+.is-branch-expanded,
+.is-child-entering,
+.is-child-exiting,
+.is-branch-collapsing {
     position: absolute;
     inset: 0;
     pointer-events: none;
 }
 
-.is-forward-outgoing {
-    z-index: 2;
-    animation: hold-level $transition-duration linear both;
+.is-branch-expanding,
+.is-branch-collapsing {
+    z-index: 1;
+    animation: hold-level $branch-duration linear both;
+
+    .choice-item {
+        transition: none;
+    }
+}
+
+.is-branch-expanding {
+    .choice-item.is-selected {
+        animation: expand-selected $branch-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
+    }
+
+    .choice-item.is-sibling {
+        animation: contract-sibling $branch-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
+    }
+}
+
+.is-branch-expanded {
+    z-index: 1;
 
     .choice-item {
         transition: none;
     }
 
     .choice-item.is-selected {
-        animation: expand-selected $transition-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
+        flex-grow: 1;
+        opacity: 1;
+        filter: brightness(1);
+        transform: skewX(0deg);
     }
 
     .choice-item.is-sibling {
-        animation: contract-sibling $transition-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
+        min-width: 0;
+        flex-grow: 0;
+        opacity: 0;
     }
 }
 
-.is-forward-incoming {
-    z-index: 1;
-    animation: reveal-child-level $transition-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
-}
-
-.is-back-outgoing {
+.is-child-entering {
     z-index: 2;
-    animation: conceal-child-level $transition-duration ease both;
+    animation: child-enter-from-right $swipe-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
 }
 
-.is-back-incoming {
-    z-index: 1;
-    animation: hold-level $transition-duration linear both;
+.is-child-exiting {
+    z-index: 2;
+    animation: child-exit-to-right $swipe-duration cubic-bezier(0.4, 0, 0.8, 0.25) both;
+}
 
-    .choice-item {
-        transition: none;
-    }
-
+.is-branch-collapsing {
     .choice-item.is-selected {
-        animation: restore-selected $transition-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
+        animation: collapse-selected $branch-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
     }
 
     .choice-item.is-sibling {
-        animation: restore-sibling $transition-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
+        animation: restore-sibling $branch-duration cubic-bezier(0.2, 0.75, 0.2, 1) both;
     }
 }
 
@@ -263,94 +282,71 @@ $transition-duration: 440ms;
 }
 
 @keyframes expand-selected {
-    0% {
+    from {
         flex-grow: 1;
-        opacity: 1;
         filter: brightness(0.85);
         transform: skewX(-5deg);
     }
-    58% {
+    to {
         flex-grow: 1;
-        opacity: 1;
-        filter: brightness(1);
-        transform: skewX(0deg);
-    }
-    100% {
-        flex-grow: 1;
-        opacity: 0;
         filter: brightness(1);
         transform: skewX(0deg);
     }
 }
 
 @keyframes contract-sibling {
-    0% {
-        flex-grow: 1;
+    from {
         min-width: 0;
+        flex-grow: 1;
         opacity: 1;
     }
-    58%,
-    100% {
+    to {
+        min-width: 0;
         flex-grow: 0;
-        min-width: 0;
         opacity: 0;
     }
 }
 
-@keyframes reveal-child-level {
-    0%,
-    54% {
-        opacity: 0;
-        clip-path: inset(0 48% 0 48%);
-        transform: scaleX(0.98);
+@keyframes child-enter-from-right {
+    from {
+        transform: translateX(100%);
     }
-    100% {
-        opacity: 1;
-        clip-path: inset(0);
-        transform: scaleX(1);
+    to {
+        transform: translateX(0);
     }
 }
 
-@keyframes conceal-child-level {
-    0% {
-        opacity: 1;
-        clip-path: inset(0);
-        transform: scaleX(1);
+@keyframes child-exit-to-right {
+    from {
+        transform: translateX(0);
     }
-    42%,
-    100% {
-        opacity: 0;
-        clip-path: inset(0 48% 0 48%);
-        transform: scaleX(0.98);
+    to {
+        transform: translateX(100%);
     }
 }
 
-@keyframes restore-selected {
-    0%,
-    42% {
+@keyframes collapse-selected {
+    from {
         flex-grow: 1;
-        opacity: 1;
         filter: brightness(1);
         transform: skewX(0deg);
     }
-    100% {
+    to {
         flex-grow: 1;
-        opacity: 1;
         filter: brightness(0.85);
         transform: skewX(-5deg);
     }
 }
 
 @keyframes restore-sibling {
-    0%,
-    42% {
-        flex-grow: 0;
+    from {
         min-width: 0;
+        flex-grow: 0;
         opacity: 0;
     }
-    100% {
-        flex-grow: 1;
+    to {
         min-width: 0;
+        flex-grow: 1;
         opacity: 1;
     }
 }
